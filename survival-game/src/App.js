@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import './App.css';
 
 // Constants for game settings
-const GRID_SIZE = 8;
-const GAME_DURATION = 120000; // 2 minutes in milliseconds
+const GRID_SIZE = 5; // Updated grid size to 5
+const GAME_DURATION = 90000; // Updated game duration to 90 seconds
+const MAX_MOVES = 25; // Updated maximum moves allowed for each player
 
 const App = () => {
   const { register, handleSubmit } = useForm();
   const [players, setPlayers] = useState([
-    { id: 1, name: '', position: { x: 0, y: 0 }, food: 5, water: 5, wood: 5, icon: '' },
-    { id: 2, name: '', position: { x: 7, y: 7 }, food: 5, water: 5, wood: 5, icon: '' },
+    { id: 1, name: '', position: { x: 0, y: 0 }, food: 3, water: 3, wood: 3, icon: '', moveCount: 0 },
+    { id: 2, name: '', position: { x: 4, y: 4 }, food: 3, water: 3, wood: 3, icon: '', moveCount: 0 },
   ]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [resources, setResources] = useState({
@@ -21,6 +22,13 @@ const App = () => {
   });
   const [gameOver, setGameOver] = useState(false);
   const [timer, setTimer] = useState(GAME_DURATION);
+  const [loser, setLoser] = useState(null); // Track the loser
+  const [winner, setWinner] = useState(null); // Track the winner
+  const [isCapturing, setIsCapturing] = useState(false); // Track if capturing
+  const [playerIndexToCapture, setPlayerIndexToCapture] = useState(null); // Track which player's image to capture
+  const [showInstructions, setShowInstructions] = useState(false); // Control visibility of instructions
+  const videoRef = useRef(null); // Reference for the video element
+  const canvasRef = useRef(null); // Reference for the canvas element
 
   // Function to generate random positions for resources
   function getRandomPosition() {
@@ -30,15 +38,46 @@ const App = () => {
     };
   }
 
-  // Function to reset resource position after collection
-  const resetResource = (resourceName) => {
-    setResources((prevResources) => ({
-      ...prevResources,
-      [resourceName]: {
-        ...prevResources[resourceName],
-        position: getRandomPosition(),
-      },
-    }));
+  // Start capturing the webcam
+  const startCapture = async (index) => {
+    setPlayerIndexToCapture(index);
+    setIsCapturing(true);
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play();
+    }
+  };
+
+  // Capture image from the webcam
+  const captureImage = () => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (videoRef.current) {
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const imageDataUrl = canvas.toDataURL('image/png');
+      setPlayers((prevPlayers) => {
+        const newPlayers = [...prevPlayers];
+        newPlayers[playerIndexToCapture].icon = imageDataUrl;
+        return newPlayers;
+      });
+      stopCapture();
+    }
+  };
+
+  // Stop capturing
+  const stopCapture = () => {
+    setIsCapturing(false);
+    setPlayerIndexToCapture(null);
+    if (videoRef.current) {
+      const stream = videoRef.current.srcObject;
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      videoRef.current.srcObject = null;
+    }
   };
 
   // Keyboard movement controls
@@ -51,16 +90,16 @@ const App = () => {
 
       // Arrow key movements
       switch (e.key) {
-        case 'ArrowLeft':
+        case 'ArrowUp':
           if (player.position.y > 0) player.position.y -= 1;
           break;
-        case 'ArrowRight':
+        case 'ArrowDown':
           if (player.position.y < GRID_SIZE - 1) player.position.y += 1;
           break;
-        case 'ArrowDown':
+        case 'ArrowRight':
           if (player.position.x < GRID_SIZE - 1) player.position.x += 1;
           break;
-        case 'ArrowUp':
+        case 'ArrowLeft':
           if (player.position.x > 0) player.position.x -= 1;
           break;
         default:
@@ -74,24 +113,53 @@ const App = () => {
           resources[r].position.y === player.position.y
       );
 
+      // Collect resources based on the condition
       if (resourceHere && resources[resourceHere].amount > 0) {
-        resources[resourceHere].amount -= 1;
-        if (resourceHere === 'water') player.water += 1;
-        if (resourceHere === 'food') player.food += 1;
-        if (resourceHere === 'wood') player.wood += 1;
+        if (resourceHere === 'wood' && player.wood < 5) {
+          player.wood += 1; // Collect wood
+          // Only allow to collect food and water after reaching 5 wood
+          if (player.wood === 5) {
+            alert(`${player.name} has collected 5 woods! Now you can collect food and water.`);
+          }
+        } else if ((resourceHere === 'food' || resourceHere === 'water') && player.wood === 5) {
+          player[resourceHere] += 1; // Collect food or water
+        } else {
+          alert(`You must collect 5 woods before collecting ${resourceHere}.`);
+          return; // Exit if conditions are not met
+        }
 
-        resetResource(resourceHere);
+        // Reset resource position without exhausting it
+        setResources((prevResources) => ({
+          ...prevResources,
+          [resourceHere]: {
+            ...prevResources[resourceHere],
+            position: getRandomPosition(),
+          },
+        }));
       }
 
+      // Increment move count
+      player.moveCount += 1;
+
       // Check for game over conditions
-      if (player.food <= 0 || player.water <= 0 || player.wood <= 0) {
+      if (player.food >= 5 && player.water >= 5 && player.wood >= 5) {
+        setWinner(player.name);
         setGameOver(true);
-        alert(`${player.name} ran out of resources! Game over.`);
+        alert(`${player.name} has collected all resources! Game over.`);
         return;
       }
 
+      // Check for losing condition
+      if (player.moveCount >= MAX_MOVES) {
+        setLoser(player.name);
+        setGameOver(true);
+        alert(`${player.name} has reached the maximum moves. You lose!`);
+        return;
+      }
+
+      // Switch to next player
+      setCurrentPlayerIndex((currentPlayerIndex + 1) % players.length);
       setPlayers(newPlayers);
-      setCurrentPlayerIndex((currentPlayerIndex + 1) % 2);
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -100,13 +168,14 @@ const App = () => {
     };
   }, [players, resources, currentPlayerIndex, gameOver]);
 
-  // Timer effect to end the game after 2 minutes
+  // Timer effect to end the game after 1 minute and 30 seconds
   useEffect(() => {
     if (timer <= 0) {
       setGameOver(true);
       const player1Score = players[0].food + players[0].water + players[0].wood;
       const player2Score = players[1].food + players[1].water + players[1].wood;
       const winner = player1Score > player2Score ? players[0].name : players[1].name;
+      setWinner(winner);
       alert(`Time's up! ${winner} wins!`);
       return;
     }
@@ -120,114 +189,107 @@ const App = () => {
 
   // Handle form submission for player names and icons
   const onSubmit = (data) => {
-    const player1Icon = URL.createObjectURL(data.icon1[0]);
-    const player2Icon = URL.createObjectURL(data.icon2[0]);
-    setPlayers([
-      { ...players[0], name: data.player1, icon: player1Icon },
-      { ...players[1], name: data.player2, icon: player2Icon },
-    ]);
+    setPlayers((prevPlayers) => {
+      const newPlayers = [...prevPlayers];
+      newPlayers[0].name = data.player1;
+      newPlayers[1].name = data.player2;
+      return newPlayers;
+    });
+    setShowInstructions(true); // Show instructions after starting the game
+  };
+
+  // Function to close instructions
+  const closeInstructions = () => {
+    setShowInstructions(false);
   };
 
   // Player name and icon input form with animations
   return (
     <div className="App">
       <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
-        Resource Management Survival Game
+        STRANDED - BATTLE OF NIGGA
       </motion.h1>
       {!players[0].name || !players[1].name ? (
-        <motion.form
-          onSubmit={handleSubmit(onSubmit)}
+        <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <label>
-            Player 1 Name:
-            <input {...register('player1')} required />
-          </label>
-          <br />
-          <label>
-            Player 1 Icon:
-            <input type="file" {...register('icon1')} required accept="image/*" />
-          </label>
-          <br />
-          <label>
-            Player 2 Name:
-            <input {...register('player2')} required />
-          </label>
-          <br />
-          <label>
-            Player 2 Icon:
-            <input type="file" {...register('icon2')} required accept="image/*" />
-          </label>
-          <br />
-          <motion.button type="submit" whileHover={{ scale: 1.1 }} className="start-button">
-            Start Game
-          </motion.button>
-        </motion.form>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <label>
+              Player 1 Name:
+              <input {...register('player1')} required />
+            </label>
+            <br />
+            <button type="button" onClick={() => startCapture(0)}>
+              Capture Player 1 Image
+            </button>
+            <br />
+            <label>
+              Player 2 Name:
+              <input {...register('player2')} required />
+            </label>
+            <br />
+            <button type="button" onClick={() => startCapture(1)}>
+              Capture Player 2 Image
+            </button>
+            <br />
+            <button type="submit">Start Game</button>
+          </form>
+          {isCapturing && (
+            <div>
+              <video ref={videoRef} width="320" height="240" autoPlay></video>
+              <button onClick={captureImage}>Capture</button>
+              <button onClick={stopCapture}>Stop</button>
+              <canvas ref={canvasRef} width="320" height="240" style={{ display: 'none' }} />
+            </div>
+          )}
+        </motion.div>
       ) : (
-        <>
-          <h2>Time Remaining: {Math.floor(timer / 1000)} seconds</h2>
-          <GameGrid players={players} resources={resources} />
-          <div className="player-info">
-            <h2>Current Player: {players[currentPlayerIndex]?.name}</h2>
-            {players.map((player) => (
-              <p key={player.id}>
-                <img src={player.icon} alt={player.name} className="player-icon" />
-                {player.name}: Food = {player.food}, Water = {player.water}, Wood = {player.wood}
-              </p>
+        <div>
+          <h2>Game On!</h2>
+          {winner && <h3>Winner: {winner}</h3>} {/* Display winner here */}
+          <h3>Current Player: {players[currentPlayerIndex].name}</h3>
+          <p>Remaining Time: {Math.floor(timer / 1000)} seconds</p>
+          <div className="grid">
+            {Array.from({ length: GRID_SIZE }, (_, rowIndex) => (
+              <div key={rowIndex} className="grid-row">
+                {Array.from({ length: GRID_SIZE }, (_, colIndex) => {
+                  const playerHere = players.find((p) => p.position.x === rowIndex && p.position.y === colIndex);
+                  return (
+                    <div key={colIndex} className={`grid-cell ${playerHere ? 'player' : ''}`}>
+                      {playerHere ? (
+                        <img src={playerHere.icon} alt={`Player ${playerHere.id}`} style={{ width: '50px', height: '50px' }} />
+                      ) : null}
+                      {resources.food.position.x === rowIndex && resources.food.position.y === colIndex && (
+                        <div className="resource">🍏</div>
+                      )}
+                      {resources.water.position.x === rowIndex && resources.water.position.y === colIndex && (
+                        <div className="resource">💧</div>
+                      )}
+                      {resources.wood.position.x === rowIndex && resources.wood.position.y === colIndex && (
+                        <div className="resource">🪵</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             ))}
           </div>
-        </>
-      )}
-    </div>
-  );
-};
-
-// Game grid component for displaying players and resources
-const GameGrid = ({ players, resources }) => {
-  return (
-    <div className="grid">
-      {Array.from({ length: GRID_SIZE }).map((_, rowIndex) => (
-        <div key={rowIndex} className="grid-row">
-          {Array.from({ length: GRID_SIZE }).map((_, colIndex) => {
-            const playerHere = players.find(
-              (p) => p.position.x === colIndex && p.position.y === rowIndex
-            );
-            const resourceHere = Object.keys(resources).find(
-              (r) =>
-                resources[r].position.x === colIndex &&
-                resources[r].position.y === rowIndex
-            );
-
-            // Resource icons
-            const resourceIcons = {
-              water: '/public/water_drink_bottle_icon-icons.com_51087.png',
-              food: '/public/image.png', // Path to your food icon image
-              wood: '/public/1486071980-1_79325.png', // Path to your wood icon image
-            };
-
-            return (
-              <motion.div
-                key={colIndex}
-                className={`grid-cell ${
-                  playerHere ? `player-${playerHere.id}` : resourceHere ? `resource-${resourceHere}` : ''
-                }`}
-                animate={{ scale: playerHere ? 1.2 : 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {playerHere ? (
-                  <img src={playerHere.icon} alt={playerHere.name} className="player-icon" />
-                ) : resourceHere ? (
-                  <img src={resourceIcons[resourceHere]} alt={resourceHere} className="resource-icon" />
-                ) : (
-                  ''
-                )}
-              </motion.div>
-            );
-          })}
+          {showInstructions && (
+            <div className="instructions">
+              <h2>Game Instructions</h2>
+              <p>
+                Each player has a maximum of {MAX_MOVES} moves to collect resources.
+                Collect wood first to unlock food and water collection.
+                The first player to collect 5 of each resource wins the game.
+                Good luck!
+              </p>
+              <button onClick={closeInstructions}>Close Instructions</button>
+            </div>
+          )}
         </div>
-      ))}
+      )}
     </div>
   );
 };
