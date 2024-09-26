@@ -30,12 +30,19 @@ const App = () => {
   const videoRef = useRef(null); // Reference for the video element
   const canvasRef = useRef(null); // Reference for the canvas element
 
-  // Function to generate random positions for resources
+  // Function to generate random positions for resources that do not overlap with players
   function getRandomPosition() {
-    return {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
-    };
+    let position;
+    let overlap;
+    do {
+      position = {
+        x: Math.floor(Math.random() * GRID_SIZE),
+        y: Math.floor(Math.random() * GRID_SIZE),
+      };
+      // Check for overlap with players
+      overlap = players.some(player => player.position.x === position.x && player.position.y === position.y);
+    } while (overlap);
+    return position;
   }
 
   // Start capturing the webcam
@@ -145,16 +152,14 @@ const App = () => {
       if (player.food >= 5 && player.water >= 5 && player.wood >= 5) {
         setWinner(player.name);
         setGameOver(true);
-        alert(`${player.name} has collected all resources! Game over.`);
-        return;
+        return; // End the game
       }
 
       // Check for losing condition
       if (player.moveCount >= MAX_MOVES) {
         setLoser(player.name);
         setGameOver(true);
-        alert(`${player.name} has reached the maximum moves. You lose!`);
-        return;
+        return; // End the game
       }
 
       // Switch to next player
@@ -175,8 +180,7 @@ const App = () => {
       const player1Score = players[0].food + players[0].water + players[0].wood;
       const player2Score = players[1].food + players[1].water + players[1].wood;
       const winner = player1Score > player2Score ? players[0].name : players[1].name;
-      setWinner(winner);
-      alert(`Time's up! ${winner} wins!`);
+      setWinner(winner); // Set winner state
       return;
     }
 
@@ -207,7 +211,7 @@ const App = () => {
   return (
     <div className="App">
       <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
-        STRANDED - BATTLE OF NIGGA
+        STRANDED - BATTLE OF SURVIVAL
       </motion.h1>
       {!players[0].name || !players[1].name ? (
         <motion.div
@@ -248,7 +252,6 @@ const App = () => {
       ) : (
         <div>
           <h2>Game On!</h2>
-          {winner && <h3>Winner: {winner}</h3>} {/* Display winner here */}
           <h3>Current Player: {players[currentPlayerIndex].name}</h3>
           <p>Remaining Time: {Math.floor(timer / 1000)} seconds</p>
           <div className="grid">
@@ -286,6 +289,13 @@ const App = () => {
                 Good luck!
               </p>
               <button onClick={closeInstructions}>Close Instructions</button>
+            </div>
+          )}
+          {/* Display the winner when the game is over */}
+          {gameOver && winner && (
+            <div className="winner">
+              <h2>Game Over!</h2>
+              <h3>{winner} is the Winner!</h3>
             </div>
           )}
         </div>
