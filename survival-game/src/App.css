@@ -1,0 +1,170 @@
+/* General body styling */
+body {
+  background-color: #f0f4f8;
+  font-family: 'Arial', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+/* Main container for the app */
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+/* Headings with shadow and creative styling */
+h1 {
+  font-size: 48px; /* Larger size for impact */
+  color: #333;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Shadow effect */
+  font-family: 'Georgia', serif; /* Elegant font */
+  margin-bottom: 10px; /* Space below heading */
+}
+
+h2 {
+  color: #555;
+  font-size: 30px; /* Increased size for visibility */
+  margin-top: 10px;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2); /* Shadow effect */
+}
+
+/* Player input section styling */
+.player-input {
+  margin-top: 20px;
+  background-color: #e0e0e0; /* Light grey background */
+  border-radius: 10px; /* Rounded corners */
+  padding: 15px; /* Padding for spacing */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Soft shadow for depth */
+  display: inline-block; /* Center the input box */
+}
+
+/* Robot-like prompt text */
+.player-input h3 {
+  font-size: 28px; /* Font size for the robot's prompt */
+  color: #333; /* Dark text for contrast */
+  text-align: center; /* Center the prompt text */
+  margin-bottom: 10px; /* Space below the prompt */
+  font-family: 'Courier New', Courier, monospace; /* Monospace font for a robotic feel */
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1); /* Light shadow */
+}
+
+/* Input field styling */
+.player-input input[type="text"] {
+  width: 80%; /* Make input field responsive */
+  padding: 10px; /* Padding for text input */
+  border: 2px solid #ccc; /* Border color */
+  border-radius: 5px; /* Slightly rounded corners */
+  font-size: 20px; /* Larger text for readability */
+  outline: none; /* Remove default outline */
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Inner shadow for depth */
+  transition: border-color 0.3s ease; /* Smooth transition on focus */
+}
+
+/* Input field focus effect */
+.player-input input[type="text"]:focus {
+  border-color: #03a9f4; /* Change border color on focus */
+  box-shadow: 0 0 5px rgba(3, 169, 244, 0.5); /* Glow effect */
+}
+
+/* Submit button styling */
+.player-input button {
+  margin-top: 10px; /* Space above button */
+  padding: 10px 20px; /* Button padding */
+  background-color: #4caf50; /* Green background for button */
+  color: white; /* White text color */
+  border: none; /* Remove default border */
+  border-radius: 5px; /* Rounded corners */
+  font-size: 18px; /* Button text size */
+  cursor: pointer; /* Pointer cursor on hover */
+  transition: background-color 0.3s ease; /* Smooth background change */
+}
+
+/* Button hover effect */
+.player-input button:hover {
+  background-color: #45a049; /* Darker green on hover */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); /* Slight shadow on hover */
+}
+
+/* Grid layout */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, 60px); /* Defines an 8x8 grid */
+  grid-template-rows: repeat(8, 60px); /* Each cell is 60px */
+  gap: 5px;
+  margin: 20px auto;
+  background-color: #e6e6e6;
+  border-radius: 10px;
+  padding: 10px;
+  border: 2px solid #ccc;
+}
+
+/* Individual grid cells */
+.grid-cell {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ccc;
+  background-color: #fafafa;
+  border-radius: 5px;
+  font-size: 24px;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+/* Player colors */
+.grid-cell.player-1 {
+  background-color: #8bc34a; /* Light green for player 1 */
+}
+
+.grid-cell.player-2 {
+  background-color: #03a9f4; /* Light blue for player 2 */
+}
+
+/* Resource-specific styles */
+.grid-cell.resource-food {
+  background-color: #ffeb3b; /* Yellow for food */
+  border-color: #fbc02d;
+}
+
+.grid-cell.resource-water {
+  background-color: #4caf50; /* Green for water */
+  border-color: #388e3c;
+}
+
+.grid-cell.resource-wood {
+  background-color: #795548; /* Brown for wood */
+  border-color: #5d4037;
+}
+
+/* Player info section */
+.player-info {
+  margin-top: 20px;
+}
+
+/* Player information styling */
+.player-info p {
+  font-size: 20px; /* Slightly larger for clarity */
+  color: #333;
+}
+
+/* Player icon styling */
+.player-icon {
+  width: 50px; /* Size of player icon */
+  height: 50px;
+  border-radius: 50%; /* Make it circular */
+  object-fit: cover; /* Ensures the image covers the area properly */
+  border: 2px solid #fff; /* Adds a white border */
+}
+
+/* Resource icon styling */
+.resource-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: cover; /* Ensures resource image covers the area */
+  border-radius: 5px; /* Adds slight rounding for resource icons */
+}
